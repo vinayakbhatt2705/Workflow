@@ -1,0 +1,48 @@
+const express = require('express');
+const router = express.Router();
+const Role = require('../models/Role');
+
+// Get all roles
+router.get('/', async (req, res) => {
+    const roles = await Role.find();
+    res.json(roles);
+});
+
+// Get single role
+router.get('/:id', async (req, res) => {
+    const role = await Role.findById(req.params.id);
+    res.json(role);
+});
+
+// Create role
+router.post('/', async (req, res) => {
+    try {
+        const role = new Role(req.body);
+        await role.save();
+        res.json(role);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Update role
+router.put('/:id', async (req, res) => {
+    try {
+        const role = await Role.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(role);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Delete role
+router.delete('/:id', async (req, res) => {
+    try {
+        await Role.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Role deleted successfully' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+module.exports = router;

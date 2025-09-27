@@ -1,0 +1,36 @@
+const WorkflowStage = require("../models/WorkflowStage");
+const express = require("express");
+const router = express.Router();
+
+// Recursive function to build children
+async function buildTree(parentId = null, task_type) {
+  // Fetch stages with given parentId
+  const stages = await WorkflowStage.find({ parentId, task_type }).lean();
+
+  // Recursively fetch children
+  const tree = await Promise.all(
+    stages.map(async (stage) => {
+      const children = await buildTree(stage._id, task_type);
+      return { ...stage, children };
+    })
+  );
+
+  return tree;
+}
+
+// GET full workflow tree
+// Example: /workflow/tree?task_type=TypeA
+router.get("/workflow/tree", async (req, res) => {
+  try {
+    const task_type = req.query.task_type; // get task_type from query
+    if (!task_type) return res.status(400).json({ error: "task_type is required" });
+
+    const tree = await buildTree(null, task_type); // start from top-level
+    res.json(tree);
+  } catch (err) {
+    console.error("Error building workflow tree:", err);
+    res.status(500).json({ error: "Failed to build workflow tree" });
+  }
+});
+
+module.exports = router;

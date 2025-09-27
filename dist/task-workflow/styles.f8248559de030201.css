@@ -1,0 +1,1 @@
+.incident-view-container{display:flex;gap:1rem;padding:1rem;border-radius:16px;border:2px solid #ccc;background-color:#b93333;box-shadow:0 4px 12px #0000001a}.incident-view-container .dashboard-column{flex:1}.incident-view-container .details-column{flex:1.5}
