@@ -28,12 +28,12 @@ const {stagelogs}=  require('./routes/stagelogs');
 app.use(cors());
 app.use(bodyParser.json());
 
-mongoose.connect("mongodb://localhost:27017/workflow", {
+/*mongoose.connect("mongodb://localhost:27017/workflow", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => console.log("✅ MongoDB connected"))
-.catch(err => console.error("❌ MongoDB connection error:", err));
+.catch(err => console.error("❌ MongoDB connection error:", err));*/
 app.use("/api/stages",WorkflowStage);
 app.use("/api/displaytime", DisplayTime);
 app.use("/api/treeview", TreeView);
@@ -56,6 +56,10 @@ app.use("/api/stagelogs", stagelogs);
 
 
 app.use(express.static(path.join(__dirname, 'dist/task-workflow')));
+
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error("Mongo error", err));
 
 // catch-all for Angular routes
 app.get(/^(?!\/api).*/, (req, res) => {
