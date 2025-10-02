@@ -4,6 +4,7 @@ const Incident = require("../models/Incident");
 const Employee = require("../models/Employee");
 const ContactDetails = require("../models/ContactDetails");
 const Asset = require("../models/Asset");
+const jwt = require("jsonwebtoken");
 
 // ----------------- AUTH MIDDLEWARE -----------------
 function authMiddleware(req, res, next) {
@@ -11,7 +12,7 @@ function authMiddleware(req, res, next) {
   if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = require("jsonwebtoken").verify(token, "your_secret_key_here");
+    const decoded = jwt.verify(token, "your_secret_key_here");
     req.user = decoded;
     next();
   } catch (err) {
@@ -23,7 +24,6 @@ function authMiddleware(req, res, next) {
 router.get("/:incident_no", authMiddleware, async (req, res) => {
   try {
     const incidentNo = req.params.incident_no;
-    console.log("dashboard", incidentNo);
 
     const result = await Incident.aggregate([
       { $match: { incident_no: incidentNo } },
@@ -39,12 +39,24 @@ router.get("/:incident_no", authMiddleware, async (req, res) => {
       },
       { $unwind: { path: "$employee", preserveNullAndEmptyArrays: true } },
 
-      // Join contact details for the employee
+      // Conditional lookup for contact details
       {
         $lookup: {
           from: "contactdetails",
-          localField: "employee.emp_code",
-          foreignField: "emp_code",
+          let: { onbehalf_of: "$onbehalf_of", empCode: "$employee.emp_code", incidentNo: "$incident_no" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $cond: [
+                    { $eq: ["$$onbehalf_of", "CLIENT"] },
+                       { $in: ["$$incidentNo", { $ifNull: ["$ref_no", []] }] }, // <-- ensure array
+                    { $eq: ["$emp_code", "$$empCode"] }  // else match employee emp_code
+                  ]
+                }
+              }
+            }
+          ],
           as: "contact_details"
         }
       },
@@ -78,7 +90,11 @@ router.get("/:incident_no", authMiddleware, async (req, res) => {
             addr: 1,
             landline: 1,
             mobile: 1,
-            asset_codes: 1
+            asset_codes: 1,
+            aadhar: 1,
+            pan: 1,
+            files: 1,
+            ref_no: 1
           },
           assets: {
             asset_code: 1,

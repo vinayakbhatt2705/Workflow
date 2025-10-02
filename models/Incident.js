@@ -27,7 +27,7 @@ const IncidentSchema = new mongoose.Schema({
   task_type: { type: String, required: true },                 // maps to WorkflowStage.task_type
   current_stage: { type: String, required: true },            // maps to WorkflowStage.task
   created_by: {type:String, required:true},
-  onbehalf_of: {type:String, required:true},
+  onbehalf_of: {type:String, required:true, default: "CLIENT"},
   created_on: { type: Date, default: Date.now },
   updated_on: {type:Date, default:Date.now},
   assigned_to: { 
@@ -39,6 +39,9 @@ const IncidentSchema = new mongoose.Schema({
   incident_details: [IncidentDetailSchema],   // array of stagewise logs
  descr: { type: String, default: null }, 
  priority: {type:Number, enum: [1,2,3,4,5], default:3},
+ ref_no: {type:String, default:null},
+ reminder: {type:String,default:null},
+ next_date:{type:Date, default:Date.now},
  files: [
   {
     filename: String,

@@ -456,30 +456,52 @@ router.put("/:incident_no", authMiddleware, upload.array("files"), async (req, r
   try {
     console.log("inside in put");
     const { incident_no } = req.params;
-    const payload = req.body;
+    //const payload = req.body;
 
     const incident = await Incident.findOne({ incident_no });
     if (!incident) return res.status(404).json({ error: "Incident not found" });
 
-    let updateData = {
+    const updateData = {
       ...req.body,
-      onbehalf_of: incident.onbehalf_of,
-      created_by: incident.created_by,
       updated_on: req.body.updated_on ? new Date(req.body.updated_on) : new Date(),
-      priority: incident.priority
+      // Preserve some original fields if needed
+      created_by: incident.created_by,
+      onbehalf_of: incident.onbehalf_of,
+      current_stage: req.body.current_stage || incident.current_stage,
+      task_type: req.body.task_type || incident.task_type,
+      assigned_to: req.body.assigned_to || incident.assigned_to,
+      proj_code: req.body.proj_code ?? incident.proj_code,
+      team: req.body.team ?? incident.team,
+      descr: req.body.descr ?? incident.descr,
+      priority: req.body.priority ?? incident.priority,
+      ref_no: req.body.ref_no ?? incident.ref_no,
+      reminder: req.body.reminder ?? incident.reminder,
+      next_date: req.body.next_date ? new Date(req.body.next_date) : incident.next_date,
+      total_time: req.body.total_time ?? incident.total_time,
+      slaLimitSeconds: req.body.slaLimitSeconds ?? incident.slaLimitSeconds,
+      slaBreached: req.body.slaBreached ?? incident.slaBreached,
+      approver: req.body.approver ?? incident.approver,
+      original_user: req.body.original_user ?? incident.original_user
     };
 
     if (req.files && req.files.length) {
       updateData.files = req.files.map(file => ({
         filename: file.filename,
         originalname: file.originalname,
-        path: file.path
+        path: file.path,
+          uploaded_at: new Date()
       }));
     }
 
     if (req.user.role !== "admin") {
     //  return res.status(403).json({ message: "Forbidden: Only admin can update incident" });
     }
+// Update incident details if provided
+    if (req.body.incident_details && Array.isArray(req.body.incident_details)) {
+      // Optional: merge existing incident_details with new ones
+      updateData.incident_details = [...(incident.incident_details || []), ...req.body.incident_details];
+    }
+
 
     Object.assign(incident, updateData);
     await incident.save();
@@ -598,6 +620,25 @@ router.get('/:incident_no/original-user', authMiddleware, async (req, res) => {
     res.json({ original_user: incident.original_user });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+
+router.get("/reminders/upcoming-reminders", authMiddleware, async (req, res) => {
+  try {
+
+    console.log("reached upcoming");
+    const today = new Date();
+    const twoDaysLater = new Date();
+    twoDaysLater.setDate(today.getDate() + 2);
+
+    const incidents = await Incident.find({
+      next_date: { $gte: today, $lte: twoDaysLater }
+    }).select("incident_no ref_no descr reminder next_date").sort({ next_date: 1 });
+
+    res.json(incidents);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch reminders", error: err.message });
   }
 });
 // =========================================================
